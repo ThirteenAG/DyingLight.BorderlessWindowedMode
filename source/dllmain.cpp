@@ -27,6 +27,14 @@ LRESULT __stdcall DefWindowProcAProxy(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM
 {
     switch (Msg)
     {
+    case WM_KILLFOCUS:
+    case WM_SETFOCUS:
+        struct tagPOINT Point;
+        Point.x = Screen.nWidth / 2;
+        Point.y = Screen.nHeight / 2;
+        ClientToScreen(hWnd, &Point);
+        SetCursorPos(Point.x, Point.y);
+        break;
     case WM_SIZE:
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
@@ -53,6 +61,7 @@ LRESULT __stdcall DefWindowProcAProxy(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM
         SetWindowPos(hWnd, HWND_TOP, Rect.left, Rect.top, Rect.right, Rect.bottom, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
         break;
     }
+
     return DefWindowProcA(hWnd, Msg, wParam, lParam);
 }
 
