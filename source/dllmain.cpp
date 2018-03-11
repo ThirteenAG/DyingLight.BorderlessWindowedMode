@@ -1,6 +1,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <tuple>
+#include <CommCtrl.h>
+#pragma comment(lib, "Comctl32.lib")
 #include "Hooking.Patterns.h"
 #include "injector\injector.hpp"
 
@@ -25,15 +27,21 @@ std::tuple<int32_t, int32_t> GetDesktopRes()
 
 LRESULT __stdcall DefWindowProcAProxy(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+    static TRACKMOUSEEVENT tme;
     switch (Msg)
     {
     case WM_KILLFOCUS:
+        ClipCursor(NULL);
+        break;
+    case WM_MOUSELEAVE:
+    case WM_NCMOUSELEAVE:
     case WM_SETFOCUS:
-        struct tagPOINT Point;
-        Point.x = Screen.nWidth / 2;
-        Point.y = Screen.nHeight / 2;
-        ClientToScreen(hWnd, &Point);
-        SetCursorPos(Point.x, Point.y);
+        RECT rc;
+        GetClientRect(hWnd, &rc);
+        ClientToScreen(hWnd, reinterpret_cast<POINT*>(&rc.left));
+        ClientToScreen(hWnd, reinterpret_cast<POINT*>(&rc.right));
+        SetCursorPos(rc.left / 2, rc.right / 2);
+        ClipCursor(&rc);
         break;
     case WM_SIZE:
     case WM_KEYDOWN:
@@ -59,6 +67,15 @@ LRESULT __stdcall DefWindowProcAProxy(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM
         };
         AdjustWindowRectEx(&Rect, GetWindowLong(hWnd, GWL_STYLE), NULL, GetWindowLong(hWnd, GWL_EXSTYLE));
         SetWindowPos(hWnd, HWND_TOP, Rect.left, Rect.top, Rect.right, Rect.bottom, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+
+        if (tme.hwndTrack != hWnd)
+        {
+            tme.cbSize = sizeof(tme);
+            tme.hwndTrack = hWnd;
+            tme.dwFlags = TME_LEAVE;
+            tme.dwHoverTime = 1;
+            _TrackMouseEvent(&tme);
+        }
         break;
     }
 
